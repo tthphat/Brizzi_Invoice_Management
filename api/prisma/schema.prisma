@@ -11,3 +11,67 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  CANCELED
+}
+
+enum Currency {
+  VND
+  USD
+  JPY
+}
+
+model Invoice {
+  id                Int           @id @default(autoincrement())
+  invoiceNumber     String        @unique
+  status            InvoiceStatus @default(DRAFT)
+
+  customerName    String
+  customerEmail   String?
+  customerAddress String?
+  customerTaxCode String?
+
+  currency Currency @default(VND)
+
+  subtotal  Decimal @db.Decimal(15, 2)
+  taxAmount Decimal @db.Decimal(15, 2)
+  total     Decimal @db.Decimal(15, 2)
+
+  replacedInvoiceId Int?          @unique
+
+  issuedAt          DateTime?
+  canceledAt        DateTime?
+  cancelReason String?
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  replacedInvoice   Invoice?      @relation("InvoiceReplacement", fields: [replacedInvoiceId], references: [id])
+  replacement       Invoice?      @relation("InvoiceReplacement")
+  items             InvoiceItem[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model InvoiceItem {
+  id          Int      @id @default(autoincrement())
+
+  invoiceId   Int
+
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(15, 2)
+  amount      Decimal  @db.Decimal(15, 2)
+  taxRate Decimal @db.Decimal(5, 2)
+taxAmount Decimal @db.Decimal(15, 2)
+
+  createdAt   DateTime @default(now())
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
