@@ -8,6 +8,9 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
 
   async create(data: CreateInvoiceData) {
     const invoice = await this.prisma.invoice.create({
+      include: {
+        items: true,
+      },
       data: {
         invoiceNumber: data.invoiceNumber,
 

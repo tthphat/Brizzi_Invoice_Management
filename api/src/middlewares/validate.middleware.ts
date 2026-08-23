@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import { ErrorCode, getErrorMessage } from "../lib/error-code.js";
+import { errorResponse } from "../lib/response.js";
 
 export const validateCreateInvoice = (schema: z.ZodTypeAny) => {
   return (
@@ -10,10 +12,13 @@ export const validateCreateInvoice = (schema: z.ZodTypeAny) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: result.error.issues,
-      });
+      return errorResponse(
+        res,
+        400,
+        ErrorCode.VALIDATION_ERROR,
+        getErrorMessage(ErrorCode.VALIDATION_ERROR),
+        result.error.issues,
+      );
     }
 
     req.body = result.data;

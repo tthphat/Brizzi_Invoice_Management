@@ -46,7 +46,8 @@ export const createInvoiceSchema = z.object({
         taxRate: z
           .string()
           .regex(/^\d+(\.\d{1,2})?$/, "Tax rate must have at most 2 decimal places")
-          .transform(Number),
+          .transform(Number)
+          .refine((val) => val <= 100, "Tax rate must be between 0 and 100"),
       }),
     )
     .min(1, "Invoice must contain at least one item"),

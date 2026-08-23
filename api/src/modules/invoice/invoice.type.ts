@@ -54,4 +54,13 @@ export interface Invoice {
   cancelReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+  items: {
+    id: number;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    taxRate: number;
+    taxAmount: number;
+  }[];
 }
