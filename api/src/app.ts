@@ -1,13 +1,11 @@
 import express from "express";
+import invoiceRoutes from "./modules/invoice/invoice.routes.js";
 
 const app = express();
 
 app.use(express.json());
 
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-  });
-});
+// routes
+app.use("/api/invoices", invoiceRoutes);
 
 export default app;
