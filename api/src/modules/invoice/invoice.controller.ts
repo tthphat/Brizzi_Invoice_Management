@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { InvoiceService } from "./invoice.service.js";
 import type { CreateInvoiceRequest } from "./invoice.validation.js";
+import { createdResponse } from "../../lib/response.js";
 
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) {}
@@ -11,7 +12,7 @@ export class InvoiceController {
 
       const invoice = await this.invoiceService.createInvoice(data);
 
-      return res.status(201).json(invoice);
+      return createdResponse(res, invoice);
     } catch (error) {
       next(error);
     }
