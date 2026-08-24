@@ -1,0 +1,258 @@
+{
+  "info": {
+    "name": "Invoice - Replace API",
+    "description": "Test POST /api/invoices/:invoiceNumber/replace\n\nFlow: Create → Issue → Replace → Verify",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "invoiceNumber",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Create invoice (DRAFT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+              "",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set(\"invoiceNumber\", body.data.invoiceNumber);",
+              "console.log(\"Saved invoiceNumber:\", body.data.invoiceNumber);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Cong ty ABC\",\n  \"customerEmail\": \"abc@example.com\",\n  \"customerAddress\": \"123 Nguyen Trai, HCM\",\n  \"customerTaxCode\": \"1234567890\",\n  \"currency\": \"VND\",\n  \"items\": [\n    {\n      \"description\": \"Dich vu tu van\",\n      \"quantity\": 2,\n      \"unitPrice\": \"100000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "1. Issue invoice (DRAFT → ISSUED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Status is ISSUED\", () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.status).to.eql(\"ISSUED\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/issue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices", "{{invoiceNumber}}", "issue"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "2. Replace invoice (SUCCESS)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test(\"New invoice ISSUED + linked to original\", () => {",
+              "  pm.expect(body.data.status).to.eql(\"ISSUED\");",
+              "  pm.expect(body.data.replacedInvoiceId).to.not.eql(null);",
+              "  pm.expect(body.data.invoiceNumber).to.not.eql(pm.collectionVariables.get(\"invoiceNumber\"));",
+              "});",
+              "",
+              "// Save new number to verify original got canceled",
+              "pm.collectionVariables.set(\"replacedByNumber\", body.data.invoiceNumber);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/replace",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices", "{{invoiceNumber}}", "replace"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Cong ty ABC (Corrected)\",\n  \"customerEmail\": \"abc@example.com\",\n  \"currency\": \"VND\",\n  \"items\": [\n    {\n      \"description\": \"Dich vu tu van (sua so luong)\",\n      \"quantity\": 3,\n      \"unitPrice\": \"120000\",\n      \"taxRate\": \"10\"\n    }\n  ],\n  \"reason\": \"Sai so luong\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3. Get original invoice (verify CANCELED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test(\"Original canceled with reason\", () => {",
+              "  pm.expect(body.data.status).to.eql(\"CANCELED\");",
+              "  pm.expect(body.data.cancelReason).to.eql(\"Sai so luong\");",
+              "  pm.expect(body.data.canceledAt).to.not.eql(null);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices", "{{invoiceNumber}}"]
+        }
+      }
+    },
+    {
+      "name": "4. Replace again (expect 409 CONFLICT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test(\"CONFLICT code\", () => {",
+              "  pm.expect(body.error.code).to.eql(\"CONFLICT\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/replace",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices", "{{invoiceNumber}}", "replace"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Try replace again\",\n  \"items\": [\n    {\n      \"description\": \"Item\",\n      \"quantity\": 1,\n      \"unitPrice\": \"10000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "5. Replace DRAFT invoice (expect 400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test(\"Error message\", () => {",
+              "  pm.expect(body.error.message).to.eql(\"Only ISSUED invoice can be replaced\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/replace",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices", "{{invoiceNumber}}", "replace"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Test\",\n  \"items\": [\n    {\n      \"description\": \"Item\",\n      \"quantity\": 1,\n      \"unitPrice\": \"10000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Chạy request này NGAY SAU bước 0 (trước khi issue) để thấy lỗi 400. Nếu đã chạy issue rồi thì tạo invoice mới bằng bước 0 rồi thử lại."
+      }
+    },
+    {
+      "name": "6. Replace non-existent (expect 404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+              "pm.test(\"NOT_FOUND code\", () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.error.code).to.eql(\"NOT_FOUND\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices/INV-9999-NOTEXIST/replace",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices", "INV-9999-NOTEXIST", "replace"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Test\",\n  \"items\": [\n    {\n      \"description\": \"Item\",\n      \"quantity\": 1,\n      \"unitPrice\": \"10000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}"
+        }
+      }
+    }
+  ]
+}
