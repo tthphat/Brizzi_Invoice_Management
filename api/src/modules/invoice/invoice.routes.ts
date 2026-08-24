@@ -1,8 +1,8 @@
 import { Router } from "express";
 
 import { invoiceController } from "../../container.js";
-import { validate, validateParams } from "../../middlewares/validate.middleware.js";
-import { createInvoiceSchema, invoiceNumberParamSchema } from "./invoice.validation.js";
+import { validate, validateParams, validateQuery } from "../../middlewares/validate.middleware.js";
+import { createInvoiceSchema, invoiceNumberParamSchema, listInvoiceSchema } from "./invoice.validation.js";
 
 const router = Router();
 
@@ -11,6 +11,13 @@ router.post(
   "/",
   validate(createInvoiceSchema),
   invoiceController.create.bind(invoiceController),
+);
+
+// list invoices
+router.get(
+  "/",
+  validateQuery(listInvoiceSchema),
+  invoiceController.list.bind(invoiceController),
 );
 
 // get invoice by invoice Number

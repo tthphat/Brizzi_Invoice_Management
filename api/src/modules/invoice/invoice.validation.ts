@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { CURRENCY } from "./invoice.type.js";
+import { CURRENCY, INVOICE_STATUS } from "./invoice.type.js";
 
+// create invocie schema
 export const createInvoiceSchema = z.object({
   customerName: z
     .string()
@@ -54,6 +55,30 @@ export const createInvoiceSchema = z.object({
 });
 export type CreateInvoiceRequest = z.infer<typeof createInvoiceSchema>;
 
+
+// get invoice by invoice number
 export const invoiceNumberParamSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
 });
+
+
+// get list invoice
+export const listInvoiceSchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(1),
+
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(100)
+    .default(20),
+
+  status: z
+    .enum(Object.values(INVOICE_STATUS))
+    .optional(),
+});
+export type ListInvoiceRequest = z.infer<typeof listInvoiceSchema>;

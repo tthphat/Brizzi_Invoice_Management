@@ -10,7 +10,8 @@ export const INVOICE_STATUS = {
   ISSUED: "ISSUED",
   CANCELED: "CANCELED",
 } as const;
-export type InvoiceStatus = (typeof INVOICE_STATUS)[keyof typeof INVOICE_STATUS];
+export type InvoiceStatus =
+  (typeof INVOICE_STATUS)[keyof typeof INVOICE_STATUS];
 
 export interface CreateInvoiceData {
   invoiceNumber: string;
@@ -64,3 +65,15 @@ export interface Invoice {
     taxAmount: number;
   }[];
 }
+
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export type ListInvoiceResponse = {
+  items: Invoice[];
+  pagination: Pagination;
+};

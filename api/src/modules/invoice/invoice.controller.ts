@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { InvoiceService } from "./invoice.service.js";
-import type { CreateInvoiceRequest } from "./invoice.validation.js";
+import type { CreateInvoiceRequest, ListInvoiceRequest } from "./invoice.validation.js";
 import { createdResponse, successResponse } from "../../lib/response.js";
 
 export class InvoiceController {
@@ -25,6 +25,18 @@ export class InvoiceController {
       const invoice = await this.invoiceService.getInvoiceByNumber(invoiceNumber);
 
       return successResponse(res, invoice);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async list(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = (req as Request & { validatedQuery: ListInvoiceRequest }).validatedQuery;
+
+      const result = await this.invoiceService.listInvoices(query);
+
+      return successResponse(res, result);
     } catch (error) {
       next(error);
     }

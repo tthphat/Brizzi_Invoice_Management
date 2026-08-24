@@ -1,8 +1,8 @@
 import { PrismaClient, Currency } from "../../generated/prisma/client.js";
-import type { InvoiceRepository } from "./invoice.repository.js";
-import type { CreateInvoiceData } from "./invoice.type.js";
+import type { InvoiceRepository} from "./invoice.repository.js";
+import type { CreateInvoiceData, Invoice } from "./invoice.type.js";
 import { toInvoice } from "./invoice.mapper.js";
-import type { Invoice } from "./invoice.type.js";
+import type { ListInvoiceRequest } from "./invoice.validation.js";
 
 export class PrismaInvoiceRepository implements InvoiceRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -48,5 +48,28 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     }
 
     return toInvoice(invoice);
+  }
+
+  async findMany(query: ListInvoiceRequest): Promise<{ items: Invoice[]; total: number }> {
+    const { page, limit, status } = query;
+    const skip = (page - 1) * limit;
+
+    const where = status ? { status } : {};
+
+    const [items, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: { items: true },
+      }),
+      this.prisma.invoice.count({ where }),
+    ]);
+
+    return {
+      items: items.map(toInvoice),
+      total,
+    };
   }
 }

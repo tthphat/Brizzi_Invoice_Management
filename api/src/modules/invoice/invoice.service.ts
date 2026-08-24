@@ -1,5 +1,5 @@
 import type { InvoiceRepository } from "./invoice.repository.js";
-import type { CreateInvoiceRequest } from "./invoice.validation.js";
+import type { CreateInvoiceRequest, ListInvoiceRequest } from "./invoice.validation.js";
 import {
   calculateItemAmount,
   calculateItemTax,
@@ -7,7 +7,7 @@ import {
   generateInvoiceNumber,
 } from "./invoice.calculator.js";
 import { Decimal } from "decimal.js";
-import type { Invoice } from "./invoice.type.js";
+import type { Invoice, ListInvoiceResponse } from "./invoice.type.js";
 import { NotFoundError } from "../../lib/app-error.js";
 
 export class InvoiceService {
@@ -75,5 +75,19 @@ export class InvoiceService {
     }
 
     return invoice;
+  }
+
+  async listInvoices(query: ListInvoiceRequest): Promise<ListInvoiceResponse> {
+    const { items, total } = await this.invoiceRepository.findMany(query);
+
+    return {
+      items,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
   }
 }
