@@ -137,3 +137,10 @@ export const updateInvoiceSchema = z.object({
     .optional(),
 });
 export type UpdateInvoiceRequest = z.infer<typeof updateInvoiceSchema>;
+
+// Schema for updating invoice status
+export const updateStatusSchema = z.object({
+  status: z.enum(["ISSUED", "CANCELED"]),
+  reason: z.string().max(500).optional(),
+});
+export type UpdateStatusRequest = z.infer<typeof updateStatusSchema>;

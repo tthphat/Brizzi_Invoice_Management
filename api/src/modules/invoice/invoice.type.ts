@@ -99,3 +99,10 @@ export interface UpdateInvoiceData {
     }[];
   };
 }
+
+export interface UpdateStatusType {
+  status: InvoiceStatus;
+  canceledAt: Date | null;
+  cancelReason: string | null;
+  issuedAt: Date | null;
+}

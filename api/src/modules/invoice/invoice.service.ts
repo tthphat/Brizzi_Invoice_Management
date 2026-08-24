@@ -1,5 +1,5 @@
 import type { InvoiceRepository } from "./invoice.repository.js";
-import type { CreateInvoiceRequest, ListInvoiceRequest, UpdateInvoiceRequest } from "./invoice.validation.js";
+import type { CreateInvoiceRequest, ListInvoiceRequest, UpdateInvoiceRequest, UpdateStatusRequest } from "./invoice.validation.js";
 import {
   calculateItemAmount,
   calculateItemTax,
@@ -7,7 +7,7 @@ import {
   generateInvoiceNumber,
 } from "./invoice.calculator.js";
 import { Decimal } from "decimal.js";
-import { INVOICE_STATUS, type Invoice, type ListInvoiceResponse } from "./invoice.type.js";
+import { INVOICE_STATUS, type Invoice, type ListInvoiceResponse, type UpdateStatusType } from "./invoice.type.js";
 import { AppError, NotFoundError } from "../../lib/app-error.js";
 import { ErrorCode } from "../../lib/error-code.js";
 
@@ -153,5 +153,41 @@ export class InvoiceService {
     }
 
     return this.invoiceRepository.updateDraft(invoiceNumber, updateData);
+  }
+
+  async updateStatus(invoiceNumber: string, data: UpdateStatusRequest): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!invoice) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    // Validate status transition
+    if (data.status === INVOICE_STATUS.ISSUED) {
+      if (invoice.status !== INVOICE_STATUS.DRAFT) {
+        throw new AppError(
+          "Only DRAFT invoice can be issued",
+          400,
+          ErrorCode.BAD_REQUEST,
+        );
+      }
+    } else if (data.status === INVOICE_STATUS.CANCELED) {
+      if (invoice.status !== INVOICE_STATUS.ISSUED) {
+        throw new AppError(
+          "Only ISSUED invoice can be canceled",
+          400,
+          ErrorCode.BAD_REQUEST,
+        );
+      }
+    }
+
+    const updateData: UpdateStatusType = {
+      status: data.status,
+      canceledAt: data.status === INVOICE_STATUS.CANCELED ? new Date() : null,
+      cancelReason: data.reason ?? null,
+      issuedAt: data.status === INVOICE_STATUS.ISSUED ? new Date() : null,
+    };
+
+    return this.invoiceRepository.updateStatus(invoiceNumber, updateData);
   }
 }

@@ -1,6 +1,6 @@
 import { PrismaClient, Currency } from "../../generated/prisma/client.js";
 import type { InvoiceRepository} from "./invoice.repository.js";
-import type { CreateInvoiceData, Invoice, UpdateInvoiceData } from "./invoice.type.js";
+import { INVOICE_STATUS, type CreateInvoiceData, type Invoice, type UpdateInvoiceData, type UpdateStatusType } from "./invoice.type.js";
 import { toInvoice } from "./invoice.mapper.js";
 import type { ListInvoiceRequest } from "./invoice.validation.js";
 
@@ -92,6 +92,16 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       include: {
         items: true,
       },
+    });
+
+    return toInvoice(invoice);
+  }
+
+  async updateStatus(invoiceNumber: string, data: UpdateStatusType): Promise<Invoice> {
+    const invoice = await this.prisma.invoice.update({
+      where: { invoiceNumber },
+      data,
+      include: { items: true },
     });
 
     return toInvoice(invoice);
