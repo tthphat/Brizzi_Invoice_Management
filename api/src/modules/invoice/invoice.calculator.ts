@@ -42,7 +42,9 @@ export function calculateInvoiceTotals(
 
 export function generateInvoiceNumber(): string {
   const year = new Date().getFullYear();
-  const shortUuid = crypto.randomUUID()!.split("-")[0].toUpperCase();
+  const uuid = crypto.randomUUID() ?? "DEFAULT";
+  const parts = uuid.split("-");
+  const shortUuid = parts[0]?.toUpperCase() ?? "DEFAULT";
 
   return `INV-${year}-${shortUuid}`;
 }

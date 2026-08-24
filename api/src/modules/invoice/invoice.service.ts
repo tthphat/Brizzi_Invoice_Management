@@ -7,13 +7,13 @@ import {
   generateInvoiceNumber,
 } from "./invoice.calculator.js";
 import { Decimal } from "decimal.js";
+import type { Invoice } from "./invoice.type.js";
+import { NotFoundError } from "../../lib/app-error.js";
 
 export class InvoiceService {
-  constructor(
-    private readonly invoiceRepository: InvoiceRepository,
-  ) {}
+  constructor(private readonly invoiceRepository: InvoiceRepository) {}
 
-  async createInvoice(data: CreateInvoiceRequest) {
+  async createInvoice(data: CreateInvoiceRequest): Promise<Invoice> {
     // Calculate amounts using Decimal for precision
     const calculatedItems = data.items.map((item) => {
       const quantity = new Decimal(item.quantity);
@@ -30,7 +30,8 @@ export class InvoiceService {
       };
     });
 
-    const { subtotal, taxAmount, total } = calculateInvoiceTotals(calculatedItems);
+    const { subtotal, taxAmount, total } =
+      calculateInvoiceTotals(calculatedItems);
 
     // Convert Decimal to number for repository
     const invoiceData = {
@@ -64,5 +65,15 @@ export class InvoiceService {
 
       items: itemsForRepository,
     });
+  }
+
+  async getInvoiceByNumber(invoiceNumber: string): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!invoice) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    return invoice;
   }
 }

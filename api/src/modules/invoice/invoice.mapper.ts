@@ -24,14 +24,16 @@ export function toInvoice(prismaInvoice: PrismaInvoiceWithItems): InvoiceDTO {
     cancelReason: prismaInvoice.cancelReason ?? null,
     createdAt: new Date(prismaInvoice.createdAt),
     updatedAt: new Date(prismaInvoice.updatedAt),
-    items: prismaInvoice.items?.map((item) => ({
-      id: item.id,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice.toNumber(),
-      amount: item.amount.toNumber(),
-      taxRate: item.taxRate.toNumber(),
-      taxAmount: item.taxAmount.toNumber(),
-    })) ?? [],
+    
+    items:
+      prismaInvoice.items?.map((item) => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toNumber(),
+        amount: item.amount.toNumber(),
+        taxRate: item.taxRate.toNumber(),
+        taxAmount: item.taxAmount.toNumber(),
+      })) ?? [],
   };
 }

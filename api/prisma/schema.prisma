@@ -25,9 +25,9 @@ enum Currency {
 }
 
 model Invoice {
-  id                Int           @id @default(autoincrement())
-  invoiceNumber     String        @unique
-  status            InvoiceStatus @default(DRAFT)
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String        @unique
+  status        InvoiceStatus @default(DRAFT)
 
   customerName    String
   customerEmail   String?
@@ -40,38 +40,38 @@ model Invoice {
   taxAmount Decimal @db.Decimal(15, 2)
   total     Decimal @db.Decimal(15, 2)
 
-  replacedInvoiceId Int?          @unique
+  replacedInvoiceId Int? @unique
 
-  issuedAt          DateTime?
-  canceledAt        DateTime?
+  issuedAt     DateTime?
+  canceledAt   DateTime?
   cancelReason String?
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  replacedInvoice   Invoice?      @relation("InvoiceReplacement", fields: [replacedInvoiceId], references: [id])
-  replacement       Invoice?      @relation("InvoiceReplacement")
-  items             InvoiceItem[]
+  replacedInvoice Invoice?      @relation("InvoiceReplacement", fields: [replacedInvoiceId], references: [id])
+  replacement     Invoice?      @relation("InvoiceReplacement")
+  items           InvoiceItem[]
 
-  @@index([status])
   @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model InvoiceItem {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  invoiceId   Int
+  invoiceId Int
 
   description String
   quantity    Int
-  unitPrice   Decimal  @db.Decimal(15, 2)
-  amount      Decimal  @db.Decimal(15, 2)
-  taxRate Decimal @db.Decimal(5, 2)
-taxAmount Decimal @db.Decimal(15, 2)
+  unitPrice   Decimal @db.Decimal(15, 2)
+  amount      Decimal @db.Decimal(15, 2)
+  taxRate     Decimal @db.Decimal(5, 2)
+  taxAmount   Decimal @db.Decimal(15, 2)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }

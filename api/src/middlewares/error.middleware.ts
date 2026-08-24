@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { errorResponse } from "../lib/response.js";
 import { ErrorCode, getErrorMessage } from "../lib/error-code.js";
+import { AppError } from "../lib/app-error.js";
 
 export function errorHandler(
   err: Error,
@@ -52,6 +53,16 @@ export function errorHandler(
       503,
       ErrorCode.DATABASE_ERROR,
       getErrorMessage(ErrorCode.DATABASE_ERROR),
+    );
+  }
+
+  // AppError (custom application errors)
+  if (err instanceof AppError) {
+    return errorResponse(
+      res,
+      err.statusCode,
+      err.code,
+      err.message,
     );
   }
 

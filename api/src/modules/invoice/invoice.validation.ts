@@ -53,3 +53,7 @@ export const createInvoiceSchema = z.object({
     .min(1, "Invoice must contain at least one item"),
 });
 export type CreateInvoiceRequest = z.infer<typeof createInvoiceSchema>;
+
+export const invoiceNumberParamSchema = z.object({
+  invoiceNumber: z.string().min(1, "Invoice number is required"),
+});

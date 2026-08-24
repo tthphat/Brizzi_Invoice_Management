@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { InvoiceService } from "./invoice.service.js";
 import type { CreateInvoiceRequest } from "./invoice.validation.js";
-import { createdResponse } from "../../lib/response.js";
+import { createdResponse, successResponse } from "../../lib/response.js";
 
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) {}
@@ -13,6 +13,18 @@ export class InvoiceController {
       const invoice = await this.invoiceService.createInvoice(data);
 
       return createdResponse(res, invoice);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getByInvoiceNumber(req: Request, res: Response, next: NextFunction) {
+    try {
+      const invoiceNumber = req.params.invoiceNumber as string;
+
+      const invoice = await this.invoiceService.getInvoiceByNumber(invoiceNumber);
+
+      return successResponse(res, invoice);
     } catch (error) {
       next(error);
     }
