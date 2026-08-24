@@ -1,7 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
 import { InvoiceService } from "./invoice.service.js";
-import type { CreateInvoiceRequest, ListInvoiceRequest, UpdateInvoiceRequest, UpdateStatusRequest } from "./invoice.validation.js";
+import type {
+  CreateInvoiceRequest,
+  ListInvoiceRequest,
+  UpdateInvoiceRequest,
+  UpdateStatusRequest,
+} from "./invoice.validation.js";
 import { createdResponse, successResponse } from "../../lib/response.js";
+import { INVOICE_STATUS } from "./invoice.type.js";
+import { AppError } from "../../lib/app-error.js";
+import { ErrorCode } from "../../lib/error-code.js";
 
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) {}
@@ -22,7 +30,8 @@ export class InvoiceController {
     try {
       const invoiceNumber = req.params.invoiceNumber as string;
 
-      const invoice = await this.invoiceService.getInvoiceByNumber(invoiceNumber);
+      const invoice =
+        await this.invoiceService.getInvoiceByNumber(invoiceNumber);
 
       return successResponse(res, invoice);
     } catch (error) {
@@ -32,7 +41,8 @@ export class InvoiceController {
 
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const query = (req as Request & { validatedQuery: ListInvoiceRequest }).validatedQuery;
+      const query = (req as Request & { validatedQuery: ListInvoiceRequest })
+        .validatedQuery;
 
       const result = await this.invoiceService.listInvoices(query);
 
@@ -47,7 +57,10 @@ export class InvoiceController {
       const invoiceNumber = req.params.invoiceNumber as string;
       const data = req.body as UpdateInvoiceRequest;
 
-      const invoice = await this.invoiceService.updateDraft(invoiceNumber, data);
+      const invoice = await this.invoiceService.updateDraft(
+        invoiceNumber,
+        data,
+      );
 
       return successResponse(res, invoice);
     } catch (error) {
@@ -60,7 +73,18 @@ export class InvoiceController {
       const invoiceNumber = req.params.invoiceNumber as string;
       const data = req.body as UpdateStatusRequest;
 
-      const invoice = await this.invoiceService.updateStatus(invoiceNumber, data);
+      if (data.status === INVOICE_STATUS.DRAFT) {
+        throw new AppError(
+          "Status can not be changed to Draft",
+          400,
+          ErrorCode.BAD_REQUEST,
+        );
+      }
+
+      const invoice = await this.invoiceService.updateStatus(
+        invoiceNumber,
+        data,
+      );
 
       return successResponse(res, invoice);
     } catch (error) {
