@@ -11,6 +11,7 @@ export const ErrorCode = {
   INTERNAL_ERROR: "INTERNAL_ERROR",
   UNAUTHORIZED: "UNAUTHORIZED",
   FORBIDDEN: "FORBIDDEN",
+  BAD_REQUEST: "BAD_REQUEST",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -23,6 +24,7 @@ export const ErrorMessage = {
   [ErrorCode.INTERNAL_ERROR]: "Internal server error",
   [ErrorCode.UNAUTHORIZED]: "Unauthorized",
   [ErrorCode.FORBIDDEN]: "Forbidden",
+  [ErrorCode.BAD_REQUEST]: "Bad request",
 } as const;
 
 export function getErrorMessage(code: ErrorCode): string {

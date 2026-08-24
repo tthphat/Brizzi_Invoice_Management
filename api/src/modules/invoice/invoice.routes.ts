@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import { invoiceController } from "../../container.js";
 import { validate, validateParams, validateQuery } from "../../middlewares/validate.middleware.js";
-import { createInvoiceSchema, invoiceNumberParamSchema, listInvoiceSchema } from "./invoice.validation.js";
+import { createInvoiceSchema, invoiceNumberParamSchema, listInvoiceSchema, updateInvoiceSchema } from "./invoice.validation.js";
 
 const router = Router();
 
@@ -18,6 +18,14 @@ router.get(
   "/",
   validateQuery(listInvoiceSchema),
   invoiceController.list.bind(invoiceController),
+);
+
+// update invoice (draft only)
+router.patch(
+  "/:invoiceNumber",
+  validateParams(invoiceNumberParamSchema),
+  validate(updateInvoiceSchema),
+  invoiceController.updateDraft.bind(invoiceController),
 );
 
 // get invoice by invoice Number

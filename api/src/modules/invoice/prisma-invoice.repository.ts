@@ -1,6 +1,6 @@
 import { PrismaClient, Currency } from "../../generated/prisma/client.js";
 import type { InvoiceRepository} from "./invoice.repository.js";
-import type { CreateInvoiceData, Invoice } from "./invoice.type.js";
+import type { CreateInvoiceData, Invoice, UpdateInvoiceData } from "./invoice.type.js";
 import { toInvoice } from "./invoice.mapper.js";
 import type { ListInvoiceRequest } from "./invoice.validation.js";
 
@@ -71,5 +71,29 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       items: items.map(toInvoice),
       total,
     };
+  }
+
+  async updateDraft(invoiceNumber: string, data: UpdateInvoiceData): Promise<Invoice> {
+    const updateData: Record<string, unknown> = {};
+
+    if (data.customerName !== undefined) updateData.customerName = data.customerName;
+    if (data.customerEmail !== undefined) updateData.customerEmail = data.customerEmail;
+    if (data.customerAddress !== undefined) updateData.customerAddress = data.customerAddress;
+    if (data.customerTaxCode !== undefined) updateData.customerTaxCode = data.customerTaxCode;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.subtotal !== undefined) updateData.subtotal = data.subtotal;
+    if (data.taxAmount !== undefined) updateData.taxAmount = data.taxAmount;
+    if (data.total !== undefined) updateData.total = data.total;
+    if (data.items !== undefined) updateData.items = data.items;
+
+    const invoice = await this.prisma.invoice.update({
+      where: { invoiceNumber },
+      data: updateData,
+      include: {
+        items: true,
+      },
+    });
+
+    return toInvoice(invoice);
   }
 }

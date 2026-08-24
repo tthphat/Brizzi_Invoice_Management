@@ -1,5 +1,5 @@
 import type { InvoiceRepository } from "./invoice.repository.js";
-import type { CreateInvoiceRequest, ListInvoiceRequest } from "./invoice.validation.js";
+import type { CreateInvoiceRequest, ListInvoiceRequest, UpdateInvoiceRequest } from "./invoice.validation.js";
 import {
   calculateItemAmount,
   calculateItemTax,
@@ -7,8 +7,9 @@ import {
   generateInvoiceNumber,
 } from "./invoice.calculator.js";
 import { Decimal } from "decimal.js";
-import type { Invoice, ListInvoiceResponse } from "./invoice.type.js";
-import { NotFoundError } from "../../lib/app-error.js";
+import { INVOICE_STATUS, type Invoice, type ListInvoiceResponse } from "./invoice.type.js";
+import { AppError, NotFoundError } from "../../lib/app-error.js";
+import { ErrorCode } from "../../lib/error-code.js";
 
 export class InvoiceService {
   constructor(private readonly invoiceRepository: InvoiceRepository) {}
@@ -89,5 +90,68 @@ export class InvoiceService {
         totalPages: Math.ceil(total / query.limit),
       },
     };
+  }
+
+  async updateDraft(invoiceNumber: string, data: UpdateInvoiceRequest): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!invoice) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    if (invoice.status !== INVOICE_STATUS.DRAFT) {
+      throw new AppError(
+        "Invoice is not a draft",
+        400,
+        ErrorCode.BAD_REQUEST,
+      );
+    }
+    
+    const updateData: Record<string, unknown> = { ...data };
+
+    // Calculate if items provided
+    if (data.items) {
+      // Calculate with Decimal first
+      const calculatedItems = data.items.map((item) => {
+        const quantity = new Decimal(item.quantity);
+        const unitPrice = new Decimal(item.unitPrice);
+        const taxRate = new Decimal(item.taxRate);
+        const amount = calculateItemAmount(quantity, unitPrice);
+        const taxAmount = calculateItemTax(amount, taxRate);
+        return {
+          amount,
+          taxAmount,
+        };
+      });
+
+      const { subtotal, taxAmount, total } = calculateInvoiceTotals(calculatedItems);
+
+      // Build items for DB (convert to number)
+      const itemsForDb = data.items.map((item) => {
+        const quantity = new Decimal(item.quantity);
+        const unitPrice = new Decimal(item.unitPrice);
+        const taxRate = new Decimal(item.taxRate);
+        const amount = calculateItemAmount(quantity, unitPrice);
+        const taxAmount = calculateItemTax(amount, taxRate);
+        return {
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          amount: amount.toNumber(),
+          taxRate: item.taxRate,
+          taxAmount: taxAmount.toNumber(),
+        };
+      });
+
+      updateData.subtotal = subtotal.toNumber();
+      updateData.taxAmount = taxAmount.toNumber();
+      updateData.total = total.toNumber();
+      updateData.items = {
+        deleteMany: {},
+        create: itemsForDb,
+      };
+    }
+
+    return this.invoiceRepository.updateDraft(invoiceNumber, updateData);
   }
 }

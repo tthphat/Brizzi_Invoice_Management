@@ -77,3 +77,25 @@ export type ListInvoiceResponse = {
   items: Invoice[];
   pagination: Pagination;
 };
+
+export interface UpdateInvoiceData {
+  customerName?: string;
+  customerEmail?: string | null;
+  customerAddress?: string | null;
+  customerTaxCode?: string | null;
+  currency?: string;
+  subtotal?: number;
+  taxAmount?: number;
+  total?: number;
+  items?: {
+    deleteMany: Record<string, never>;
+    create: {
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+      taxRate: number;
+      taxAmount: number;
+    }[];
+  };
+}
