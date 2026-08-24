@@ -21,6 +21,7 @@ import {
 } from "./invoice.type.js";
 import { AppError, NotFoundError } from "../../lib/app-error.js";
 import { ErrorCode } from "../../lib/error-code.js";
+import { renderInvoicePdf } from "./invoice.pdf.js";
 
 export class InvoiceService {
   constructor(private readonly invoiceRepository: InvoiceRepository) {}
@@ -301,6 +302,32 @@ export class InvoiceService {
       },
       data.reason ?? null
     );
+  }
+
+  async exportInvoicePdf(
+    invoiceNumber: string,
+  ): Promise<{ buffer: Buffer; fileName: string }> {
+    const invoice =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!invoice) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    if (invoice.status === INVOICE_STATUS.DRAFT) {
+      throw new AppError(
+        "Only ISSUED or CANCELED invoice can be exported to PDF",
+        400,
+        ErrorCode.BAD_REQUEST
+      );
+    }
+
+    const buffer = await renderInvoicePdf(invoice);
+
+    return {
+      buffer,
+      fileName: `${invoice.invoiceNumber}.pdf`,
+    };
   }
 
   async deleteInvoice(invoiceNumber: string): Promise<void> {

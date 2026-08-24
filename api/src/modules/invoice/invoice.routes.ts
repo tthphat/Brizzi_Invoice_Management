@@ -62,6 +62,13 @@ router.post(
   invoiceController.replace.bind(invoiceController),
 );
 
+// export invoice to PDF (ISSUED, CANCELED only)
+router.get(
+  "/:invoiceNumber/pdf",
+  validateParams(invoiceNumberParamSchema),
+  invoiceController.exportPdf.bind(invoiceController),
+);
+
 // get invoice by invoice Number
 router.get(
   "/:invoiceNumber",

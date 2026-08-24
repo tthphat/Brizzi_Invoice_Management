@@ -106,6 +106,24 @@ export class InvoiceController {
     }
   }
 
+  async exportPdf(req: Request, res: Response, next: NextFunction) {
+    try {
+      const invoiceNumber = req.params.invoiceNumber as string;
+      const { buffer, fileName } =
+        await this.invoiceService.exportInvoicePdf(invoiceNumber);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fileName}"`,
+      );
+      res.setHeader("Content-Length", buffer.length);
+      res.status(200).end(buffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async deleteInvoice(req: Request, res: Response, next: NextFunction) {
     try {
       const invoiceNumber = req.params.invoiceNumber as string;
