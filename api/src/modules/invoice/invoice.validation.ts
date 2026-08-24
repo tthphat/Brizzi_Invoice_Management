@@ -133,6 +133,7 @@ export const updateInvoiceSchema = z.object({
           .refine((val) => val <= 100, "Tax rate must be between 0 and 100"),
       }),
     )
-    .min(1, "Invoice must contain at least one item"),
+    .min(1, "Invoice must contain at least one item")
+    .optional(),
 });
 export type UpdateInvoiceRequest = z.infer<typeof updateInvoiceSchema>;
