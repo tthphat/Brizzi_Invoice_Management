@@ -11,4 +11,6 @@ export interface InvoiceRepository {
   updateDraft(invoiceNumber: string, data: UpdateInvoiceData): Promise<Invoice>;
 
   updateStatus(invoiceNumber: string, data: UpdateStatusType): Promise<Invoice>;
+
+  deleteInvoice(invoiceNumber: string): Promise<void>;
 }

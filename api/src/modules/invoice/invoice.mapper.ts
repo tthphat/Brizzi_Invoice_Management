@@ -22,6 +22,7 @@ export function toInvoice(prismaInvoice: PrismaInvoiceWithItems): InvoiceDTO {
       ? new Date(prismaInvoice.canceledAt)
       : null,
     cancelReason: prismaInvoice.cancelReason ?? null,
+    deletedAt: prismaInvoice.deletedAt ? new Date(prismaInvoice.deletedAt) : null,
     createdAt: new Date(prismaInvoice.createdAt),
     updatedAt: new Date(prismaInvoice.updatedAt),
     

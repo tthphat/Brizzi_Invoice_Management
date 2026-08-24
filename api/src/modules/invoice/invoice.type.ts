@@ -53,6 +53,7 @@ export interface Invoice {
   issuedAt: Date | null;
   canceledAt: Date | null;
   cancelReason: string | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   items: {
@@ -105,4 +106,5 @@ export interface UpdateStatusType {
   canceledAt: Date | null;
   cancelReason: string | null;
   issuedAt: Date | null;
+  deletedAt?: Date | null;
 }

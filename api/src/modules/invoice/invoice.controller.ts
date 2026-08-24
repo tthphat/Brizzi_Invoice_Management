@@ -91,4 +91,14 @@ export class InvoiceController {
       next(error);
     }
   }
+
+  async deleteInvoice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const invoiceNumber = req.params.invoiceNumber as string;
+      await this.invoiceService.deleteInvoice(invoiceNumber);
+      return successResponse(res, null);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

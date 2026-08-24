@@ -1,8 +1,18 @@
 import { Router } from "express";
 
 import { invoiceController } from "../../container.js";
-import { validate, validateParams, validateQuery } from "../../middlewares/validate.middleware.js";
-import { createInvoiceSchema, invoiceNumberParamSchema, listInvoiceSchema, updateInvoiceSchema, updateStatusSchema } from "./invoice.validation.js";
+import {
+  validate,
+  validateParams,
+  validateQuery,
+} from "../../middlewares/validate.middleware.js";
+import {
+  createInvoiceSchema,
+  invoiceNumberParamSchema,
+  listInvoiceSchema,
+  updateInvoiceSchema,
+  updateStatusSchema,
+} from "./invoice.validation.js";
 
 const router = Router();
 
@@ -41,6 +51,13 @@ router.get(
   "/:invoiceNumber",
   validateParams(invoiceNumberParamSchema),
   invoiceController.getByInvoiceNumber.bind(invoiceController),
+);
+
+// delete invoice(only draft, canceled) => soft delete
+router.delete(
+  "/:invoiceNumber",
+  validateParams(invoiceNumberParamSchema),
+  invoiceController.deleteInvoice.bind(invoiceController),
 );
 
 export default router;

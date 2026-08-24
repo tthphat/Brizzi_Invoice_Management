@@ -45,6 +45,7 @@ model Invoice {
   issuedAt     DateTime?
   canceledAt   DateTime?
   cancelReason String?
+  deletedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

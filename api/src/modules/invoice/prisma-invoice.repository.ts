@@ -1,6 +1,12 @@
 import { PrismaClient, Currency } from "../../generated/prisma/client.js";
-import type { InvoiceRepository} from "./invoice.repository.js";
-import { INVOICE_STATUS, type CreateInvoiceData, type Invoice, type UpdateInvoiceData, type UpdateStatusType } from "./invoice.type.js";
+import type { InvoiceRepository } from "./invoice.repository.js";
+import {
+  INVOICE_STATUS,
+  type CreateInvoiceData,
+  type Invoice,
+  type UpdateInvoiceData,
+  type UpdateStatusType,
+} from "./invoice.type.js";
 import { toInvoice } from "./invoice.mapper.js";
 import type { ListInvoiceRequest } from "./invoice.validation.js";
 
@@ -43,18 +49,23 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       },
     });
 
-    if (!invoice) {
+    if (!invoice || invoice.deletedAt) {
       return null;
     }
 
     return toInvoice(invoice);
   }
 
-  async findMany(query: ListInvoiceRequest): Promise<{ items: Invoice[]; total: number }> {
+  async findMany(
+    query: ListInvoiceRequest,
+  ): Promise<{ items: Invoice[]; total: number }> {
     const { page, limit, status } = query;
     const skip = (page - 1) * limit;
 
-    const where = status ? { status } : {};
+    const where = {
+      ...(status ? { status } : {}),
+      deletedAt: null,
+    };
 
     const [items, total] = await Promise.all([
       this.prisma.invoice.findMany({
@@ -73,13 +84,20 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     };
   }
 
-  async updateDraft(invoiceNumber: string, data: UpdateInvoiceData): Promise<Invoice> {
+  async updateDraft(
+    invoiceNumber: string,
+    data: UpdateInvoiceData,
+  ): Promise<Invoice> {
     const updateData: Record<string, unknown> = {};
 
-    if (data.customerName !== undefined) updateData.customerName = data.customerName;
-    if (data.customerEmail !== undefined) updateData.customerEmail = data.customerEmail;
-    if (data.customerAddress !== undefined) updateData.customerAddress = data.customerAddress;
-    if (data.customerTaxCode !== undefined) updateData.customerTaxCode = data.customerTaxCode;
+    if (data.customerName !== undefined)
+      updateData.customerName = data.customerName;
+    if (data.customerEmail !== undefined)
+      updateData.customerEmail = data.customerEmail;
+    if (data.customerAddress !== undefined)
+      updateData.customerAddress = data.customerAddress;
+    if (data.customerTaxCode !== undefined)
+      updateData.customerTaxCode = data.customerTaxCode;
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.subtotal !== undefined) updateData.subtotal = data.subtotal;
     if (data.taxAmount !== undefined) updateData.taxAmount = data.taxAmount;
@@ -97,7 +115,10 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     return toInvoice(invoice);
   }
 
-  async updateStatus(invoiceNumber: string, data: UpdateStatusType): Promise<Invoice> {
+  async updateStatus(
+    invoiceNumber: string,
+    data: UpdateStatusType,
+  ): Promise<Invoice> {
     const invoice = await this.prisma.invoice.update({
       where: { invoiceNumber },
       data,
@@ -105,5 +126,13 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     });
 
     return toInvoice(invoice);
+  }
+
+  async deleteInvoice(invoiceNumber: string): Promise<void> {
+    await this.prisma.invoice.update({
+      where: { invoiceNumber },
+      data: { deletedAt: new Date() },
+      include: { items: true },
+    });
   }
 }

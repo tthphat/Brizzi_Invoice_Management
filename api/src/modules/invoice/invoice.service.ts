@@ -1,5 +1,10 @@
 import type { InvoiceRepository } from "./invoice.repository.js";
-import type { CreateInvoiceRequest, ListInvoiceRequest, UpdateInvoiceRequest, UpdateStatusRequest } from "./invoice.validation.js";
+import type {
+  CreateInvoiceRequest,
+  ListInvoiceRequest,
+  UpdateInvoiceRequest,
+  UpdateStatusRequest,
+} from "./invoice.validation.js";
 import {
   calculateItemAmount,
   calculateItemTax,
@@ -7,7 +12,12 @@ import {
   generateInvoiceNumber,
 } from "./invoice.calculator.js";
 import { Decimal } from "decimal.js";
-import { INVOICE_STATUS, type Invoice, type ListInvoiceResponse, type UpdateStatusType } from "./invoice.type.js";
+import {
+  INVOICE_STATUS,
+  type Invoice,
+  type ListInvoiceResponse,
+  type UpdateStatusType,
+} from "./invoice.type.js";
 import { AppError, NotFoundError } from "../../lib/app-error.js";
 import { ErrorCode } from "../../lib/error-code.js";
 
@@ -92,21 +102,21 @@ export class InvoiceService {
     };
   }
 
-  async updateDraft(invoiceNumber: string, data: UpdateInvoiceRequest): Promise<Invoice> {
-    const invoice = await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+  async updateDraft(
+    invoiceNumber: string,
+    data: UpdateInvoiceRequest,
+  ): Promise<Invoice> {
+    const invoice =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
 
     if (!invoice) {
       throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
     }
 
     if (invoice.status !== INVOICE_STATUS.DRAFT) {
-      throw new AppError(
-        "Invoice is not a draft",
-        400,
-        ErrorCode.BAD_REQUEST,
-      );
+      throw new AppError("Invoice is not a draft", 400, ErrorCode.BAD_REQUEST);
     }
-    
+
     const updateData: Record<string, unknown> = { ...data };
 
     // Calculate if items provided
@@ -124,7 +134,8 @@ export class InvoiceService {
         };
       });
 
-      const { subtotal, taxAmount, total } = calculateInvoiceTotals(calculatedItems);
+      const { subtotal, taxAmount, total } =
+        calculateInvoiceTotals(calculatedItems);
 
       // Build items for DB (convert to number)
       const itemsForDb = data.items.map((item) => {
@@ -155,8 +166,12 @@ export class InvoiceService {
     return this.invoiceRepository.updateDraft(invoiceNumber, updateData);
   }
 
-  async updateStatus(invoiceNumber: string, data: UpdateStatusRequest): Promise<Invoice> {
-    const invoice = await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+  async updateStatus(
+    invoiceNumber: string,
+    data: UpdateStatusRequest,
+  ): Promise<Invoice> {
+    const invoice =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
 
     if (!invoice) {
       throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
@@ -189,5 +204,24 @@ export class InvoiceService {
     };
 
     return this.invoiceRepository.updateStatus(invoiceNumber, updateData);
+  }
+
+  async deleteInvoice(invoiceNumber: string): Promise<void> {
+    const invoice =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!invoice) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    if (invoice.status === INVOICE_STATUS.ISSUED) {
+      throw new AppError(
+        "Can not delete issued invoice",
+        403,
+        ErrorCode.FORBIDDEN,
+      );
+    }
+
+    await this.invoiceRepository.deleteInvoice(invoice.invoiceNumber);
   }
 }
