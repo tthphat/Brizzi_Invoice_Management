@@ -21,6 +21,7 @@ CREATE TABLE "Invoice" (
     "issuedAt" TIMESTAMP(3),
     "canceledAt" TIMESTAMP(3),
     "cancelReason" TEXT,
+    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -49,10 +50,10 @@ CREATE UNIQUE INDEX "Invoice_invoiceNumber_key" ON "Invoice"("invoiceNumber");
 CREATE UNIQUE INDEX "Invoice_replacedInvoiceId_key" ON "Invoice"("replacedInvoiceId");
 
 -- CreateIndex
-CREATE INDEX "Invoice_status_idx" ON "Invoice"("status");
+CREATE INDEX "Invoice_createdAt_idx" ON "Invoice"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "Invoice_createdAt_idx" ON "Invoice"("createdAt");
+CREATE INDEX "Invoice_status_createdAt_idx" ON "Invoice"("status", "createdAt");
 
 -- CreateIndex
 CREATE INDEX "InvoiceItem_invoiceId_idx" ON "InvoiceItem"("invoiceId");
