@@ -12,6 +12,7 @@ export const ErrorCode = {
   UNAUTHORIZED: "UNAUTHORIZED",
   FORBIDDEN: "FORBIDDEN",
   BAD_REQUEST: "BAD_REQUEST",
+  CONFLICT: "CONFLICT",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -25,6 +26,7 @@ export const ErrorMessage = {
   [ErrorCode.UNAUTHORIZED]: "Unauthorized",
   [ErrorCode.FORBIDDEN]: "Forbidden",
   [ErrorCode.BAD_REQUEST]: "Bad request",
+  [ErrorCode.CONFLICT]: "Conflict with current state",
 } as const;
 
 export function getErrorMessage(code: ErrorCode): string {

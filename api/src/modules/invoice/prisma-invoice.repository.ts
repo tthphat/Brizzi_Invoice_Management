@@ -1,4 +1,4 @@
-import { PrismaClient, Currency } from "../../generated/prisma/client.js";
+import { PrismaClient, Currency, InvoiceStatus } from "../../generated/prisma/client.js";
 import type { InvoiceRepository } from "./invoice.repository.js";
 import {
   INVOICE_STATUS,
@@ -9,6 +9,8 @@ import {
 } from "./invoice.type.js";
 import { toInvoice } from "./invoice.mapper.js";
 import type { ListInvoiceRequest } from "./invoice.validation.js";
+import { AppError, NotFoundError } from "../../lib/app-error.js";
+import { ErrorCode } from "../../lib/error-code.js";
 
 export class PrismaInvoiceRepository implements InvoiceRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -54,6 +56,29 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     }
 
     return toInvoice(invoice);
+  }
+
+  async findReplacement(
+    originalInvoiceNumber: string,
+  ): Promise<Invoice | null> {
+    const original = await this.prisma.invoice.findUnique({
+      where: { invoiceNumber: originalInvoiceNumber },
+    });
+
+    if (!original) {
+      return null;
+    }
+
+    const replacement = await this.prisma.invoice.findUnique({
+      where: { replacedInvoiceId: original.id },
+      include: { items: true },
+    });
+
+    if (!replacement || replacement.deletedAt) {
+      return null;
+    }
+
+    return toInvoice(replacement);
   }
 
   async findMany(
@@ -126,6 +151,85 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     });
 
     return toInvoice(invoice);
+  }
+
+  async replaceInvoice(
+    originalInvoiceNumber: string,
+    newInvoiceData: CreateInvoiceData,
+    cancelReason: string | null,
+  ): Promise<Invoice> {
+    return this.prisma.$transaction(async (tx) => {
+      // Re-check inside transaction to guard against concurrent replaces
+      const original = await tx.invoice.findUnique({
+        where: { invoiceNumber: originalInvoiceNumber },
+      });
+
+      if (!original || original.deletedAt) {
+        throw new NotFoundError(
+          `Invoice with number ${originalInvoiceNumber} not found`
+        );
+      }
+
+      if (original.status !== InvoiceStatus.ISSUED) {
+        throw new AppError(
+          "Only ISSUED invoice can be replaced",
+          400,
+          ErrorCode.BAD_REQUEST
+        );
+      }
+
+      const existingReplacement = await tx.invoice.findUnique({
+        where: { replacedInvoiceId: original.id },
+      });
+
+      if (existingReplacement && !existingReplacement.deletedAt) {
+        throw new AppError(
+          `Invoice already replaced by ${existingReplacement.invoiceNumber}`,
+          409,
+          ErrorCode.CONFLICT
+        );
+      }
+
+      // Create the replacement invoice (ISSUED, linked to original)
+      const created = await tx.invoice.create({
+        data: {
+          invoiceNumber: newInvoiceData.invoiceNumber,
+
+          customerName: newInvoiceData.customerName,
+          customerEmail: newInvoiceData.customerEmail ?? null,
+          customerAddress: newInvoiceData.customerAddress ?? null,
+          customerTaxCode: newInvoiceData.customerTaxCode ?? null,
+
+          currency: newInvoiceData.currency as Currency,
+
+          subtotal: newInvoiceData.subtotal,
+          taxAmount: newInvoiceData.taxAmount,
+          total: newInvoiceData.total,
+
+          status: InvoiceStatus.ISSUED,
+          issuedAt: new Date(),
+          replacedInvoiceId: original.id,
+
+          items: {
+            create: newInvoiceData.items,
+          },
+        },
+        include: { items: true },
+      });
+
+      // Mark original as CANCELED (replaced)
+      await tx.invoice.update({
+        where: { id: original.id },
+        data: {
+          status: InvoiceStatus.CANCELED,
+          canceledAt: new Date(),
+          cancelReason:
+            cancelReason ?? `Replaced by ${created.invoiceNumber}`,
+        },
+      });
+
+      return toInvoice(created);
+    });
   }
 
   async deleteInvoice(invoiceNumber: string): Promise<void> {

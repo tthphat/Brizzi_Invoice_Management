@@ -4,6 +4,7 @@ import type {
   ListInvoiceRequest,
   UpdateInvoiceRequest,
   CancelInvoiceRequest,
+  ReplaceInvoiceRequest,
 } from "./invoice.validation.js";
 import {
   calculateItemAmount,
@@ -220,6 +221,86 @@ export class InvoiceService {
     };
 
     return this.invoiceRepository.updateStatus(invoiceNumber, updateData);
+  }
+
+  async replace(
+    invoiceNumber: string,
+    data: ReplaceInvoiceRequest,
+  ): Promise<Invoice> {
+    const original =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!original) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    if (original.status !== INVOICE_STATUS.ISSUED) {
+      // Distinguish "not issuable" from "already replaced" for clearer errors
+      const replacement =
+        await this.invoiceRepository.findReplacement(invoiceNumber);
+
+      if (replacement) {
+        throw new AppError(
+          `Invoice already replaced by ${replacement.invoiceNumber}`,
+          409,
+          ErrorCode.CONFLICT
+        );
+      }
+
+      throw new AppError(
+        "Only ISSUED invoice can be replaced",
+        400,
+        ErrorCode.BAD_REQUEST
+      );
+    }
+
+    // Calculate amounts for the new invoice using Decimal (same as create)
+    const calculatedItems = data.items.map((item) => {
+      const quantity = new Decimal(item.quantity);
+      const unitPrice = new Decimal(item.unitPrice);
+      const taxRate = new Decimal(item.taxRate);
+
+      const amount = calculateItemAmount(quantity, unitPrice);
+      const taxAmount = calculateItemTax(amount, taxRate);
+
+      return {
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        amount: amount.toNumber(),
+        taxRate: item.taxRate,
+        taxAmount: taxAmount.toNumber(),
+      };
+    });
+
+    const { subtotal, taxAmount, total } =
+      calculateInvoiceTotals(
+        calculatedItems.map((item) => ({
+          amount: new Decimal(item.amount),
+          taxAmount: new Decimal(item.taxAmount),
+        }))
+      );
+
+    return this.invoiceRepository.replaceInvoice(
+      invoiceNumber,
+      {
+        invoiceNumber: generateInvoiceNumber(),
+
+        customerName: data.customerName,
+        customerEmail: data.customerEmail ?? null,
+        customerAddress: data.customerAddress ?? null,
+        customerTaxCode: data.customerTaxCode ?? null,
+
+        currency: data.currency,
+
+        subtotal: subtotal.toNumber(),
+        taxAmount: taxAmount.toNumber(),
+        total: total.toNumber(),
+
+        items: calculatedItems,
+      },
+      data.reason ?? null
+    );
   }
 
   async deleteInvoice(invoiceNumber: string): Promise<void> {

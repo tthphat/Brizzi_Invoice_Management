@@ -12,6 +12,7 @@ import {
   listInvoiceSchema,
   updateInvoiceSchema,
   cancelInvoiceSchema,
+  replaceInvoiceSchema,
 } from "./invoice.validation.js";
 
 const router = Router();
@@ -51,6 +52,14 @@ router.post(
   validateParams(invoiceNumberParamSchema),
   validate(cancelInvoiceSchema),
   invoiceController.cancel.bind(invoiceController),
+);
+
+// replace invoice (ISSUED only) => creates new invoice, cancels original
+router.post(
+  "/:invoiceNumber/replace",
+  validateParams(invoiceNumberParamSchema),
+  validate(replaceInvoiceSchema),
+  invoiceController.replace.bind(invoiceController),
 );
 
 // get invoice by invoice Number

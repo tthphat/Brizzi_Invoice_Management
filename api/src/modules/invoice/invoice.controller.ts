@@ -5,6 +5,7 @@ import type {
   ListInvoiceRequest,
   UpdateInvoiceRequest,
   CancelInvoiceRequest,
+  ReplaceInvoiceRequest,
 } from "./invoice.validation.js";
 import { createdResponse, successResponse } from "../../lib/response.js";
 import { AppError } from "../../lib/app-error.js";
@@ -86,6 +87,20 @@ export class InvoiceController {
       const invoice = await this.invoiceService.cancel(invoiceNumber, data);
 
       return successResponse(res, invoice);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async replace(req: Request, res: Response, next: NextFunction) {
+    try {
+      const invoiceNumber = req.params.invoiceNumber as string;
+      const data = req.body as ReplaceInvoiceRequest;
+
+      const invoice = await this.invoiceService.replace(invoiceNumber, data);
+
+      // 201: a new replacement invoice is created
+      return createdResponse(res, invoice);
     } catch (error) {
       next(error);
     }

@@ -6,11 +6,19 @@ export interface InvoiceRepository {
 
   findByInvoiceNumber(invoiceNumber: string): Promise<Invoice | null>;
 
+  findReplacement(originalInvoiceNumber: string): Promise<Invoice | null>;
+
   findMany(query: ListInvoiceRequest): Promise<{ items: Invoice[]; total: number }>;
 
   updateDraft(invoiceNumber: string, data: UpdateInvoiceData): Promise<Invoice>;
 
   updateStatus(invoiceNumber: string, data: UpdateStatusType): Promise<Invoice>;
+
+  replaceInvoice(
+    originalInvoiceNumber: string,
+    newInvoiceData: CreateInvoiceData,
+    cancelReason: string | null,
+  ): Promise<Invoice>;
 
   deleteInvoice(invoiceNumber: string): Promise<void>;
 }

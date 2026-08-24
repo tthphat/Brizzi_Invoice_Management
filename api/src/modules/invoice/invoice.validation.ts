@@ -144,3 +144,13 @@ export const cancelInvoiceSchema = z.object({
     .max(500, "Cancel reason must not exceed 500 characters"),
 });
 export type CancelInvoiceRequest = z.infer<typeof cancelInvoiceSchema>;
+
+// Schema for replacing invoice (full new data + optional reason)
+export const replaceInvoiceSchema = createInvoiceSchema.extend({
+  reason: z
+    .string()
+    .trim()
+    .max(500, "Replace reason must not exceed 500 characters")
+    .optional(),
+});
+export type ReplaceInvoiceRequest = z.infer<typeof replaceInvoiceSchema>;
