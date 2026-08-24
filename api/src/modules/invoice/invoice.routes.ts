@@ -11,7 +11,7 @@ import {
   invoiceNumberParamSchema,
   listInvoiceSchema,
   updateInvoiceSchema,
-  updateStatusSchema,
+  cancelInvoiceSchema,
 } from "./invoice.validation.js";
 
 const router = Router();
@@ -38,12 +38,20 @@ router.patch(
   invoiceController.updateDraft.bind(invoiceController),
 );
 
-// update invoice status
-router.patch(
-  "/:invoiceNumber/status",
+
+// issue invoice
+router.post(
+  "/:invoiceNumber/issue",
   validateParams(invoiceNumberParamSchema),
-  validate(updateStatusSchema),
-  invoiceController.updateStatus.bind(invoiceController),
+  invoiceController.issue.bind(invoiceController),
+);
+
+// cancel invoice
+router.post(
+  "/:invoiceNumber/cancel",
+  validateParams(invoiceNumberParamSchema),
+  validate(cancelInvoiceSchema),
+  invoiceController.cancel.bind(invoiceController),
 );
 
 // get invoice by invoice Number

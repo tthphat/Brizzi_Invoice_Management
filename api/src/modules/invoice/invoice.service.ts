@@ -3,7 +3,7 @@ import type {
   CreateInvoiceRequest,
   ListInvoiceRequest,
   UpdateInvoiceRequest,
-  UpdateStatusRequest,
+  CancelInvoiceRequest,
 } from "./invoice.validation.js";
 import {
   calculateItemAmount,
@@ -79,7 +79,8 @@ export class InvoiceService {
   }
 
   async getInvoiceByNumber(invoiceNumber: string): Promise<Invoice> {
-    const invoice = await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+    const invoice =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
 
     if (!invoice) {
       throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
@@ -166,9 +167,35 @@ export class InvoiceService {
     return this.invoiceRepository.updateDraft(invoiceNumber, updateData);
   }
 
-  async updateStatus(
+  async issue(invoiceNumber: string): Promise<Invoice> {
+    const invoice =
+      await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
+
+    if (!invoice) {
+      throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
+    }
+
+    if (invoice.status !== INVOICE_STATUS.DRAFT) {
+      throw new AppError(
+        "Only DRAFT invoice can be issued",
+        400,
+        ErrorCode.BAD_REQUEST,
+      );
+    }
+
+    const updateData: UpdateStatusType = {
+      status: INVOICE_STATUS.ISSUED,
+      canceledAt: null,
+      cancelReason: null,
+      issuedAt: new Date(),
+    };
+
+    return this.invoiceRepository.updateStatus(invoiceNumber, updateData);
+  }
+
+  async cancel(
     invoiceNumber: string,
-    data: UpdateStatusRequest,
+    data: CancelInvoiceRequest,
   ): Promise<Invoice> {
     const invoice =
       await this.invoiceRepository.findByInvoiceNumber(invoiceNumber);
@@ -177,30 +204,19 @@ export class InvoiceService {
       throw new NotFoundError(`Invoice with number ${invoiceNumber} not found`);
     }
 
-    // Validate status transition
-    if (data.status === INVOICE_STATUS.ISSUED) {
-      if (invoice.status !== INVOICE_STATUS.DRAFT) {
-        throw new AppError(
-          "Only DRAFT invoice can be issued",
-          400,
-          ErrorCode.BAD_REQUEST,
-        );
-      }
-    } else if (data.status === INVOICE_STATUS.CANCELED) {
-      if (invoice.status !== INVOICE_STATUS.ISSUED) {
-        throw new AppError(
-          "Only ISSUED invoice can be canceled",
-          400,
-          ErrorCode.BAD_REQUEST,
-        );
-      }
+    if (invoice.status !== INVOICE_STATUS.ISSUED) {
+      throw new AppError(
+        "Only ISSUED invoice can be canceled",
+        400,
+        ErrorCode.BAD_REQUEST,
+      );
     }
 
     const updateData: UpdateStatusType = {
-      status: data.status,
-      canceledAt: data.status === INVOICE_STATUS.CANCELED ? new Date() : null,
-      cancelReason: data.reason ?? null,
-      issuedAt: data.status === INVOICE_STATUS.ISSUED ? new Date() : null,
+      status: INVOICE_STATUS.CANCELED,
+      canceledAt: new Date(),
+      cancelReason: data.cancelReason,
+      issuedAt: invoice.issuedAt,
     };
 
     return this.invoiceRepository.updateStatus(invoiceNumber, updateData);

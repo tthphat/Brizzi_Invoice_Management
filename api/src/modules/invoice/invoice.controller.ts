@@ -4,10 +4,9 @@ import type {
   CreateInvoiceRequest,
   ListInvoiceRequest,
   UpdateInvoiceRequest,
-  UpdateStatusRequest,
+  CancelInvoiceRequest,
 } from "./invoice.validation.js";
 import { createdResponse, successResponse } from "../../lib/response.js";
-import { INVOICE_STATUS } from "./invoice.type.js";
 import { AppError } from "../../lib/app-error.js";
 import { ErrorCode } from "../../lib/error-code.js";
 
@@ -68,23 +67,23 @@ export class InvoiceController {
     }
   }
 
-  async updateStatus(req: Request, res: Response, next: NextFunction) {
+  async issue(req: Request, res: Response, next: NextFunction) {
     try {
       const invoiceNumber = req.params.invoiceNumber as string;
-      const data = req.body as UpdateStatusRequest;
+      const invoice = await this.invoiceService.issue(invoiceNumber);
 
-      if (data.status === INVOICE_STATUS.DRAFT) {
-        throw new AppError(
-          "Status can not be changed to Draft",
-          400,
-          ErrorCode.BAD_REQUEST,
-        );
-      }
+      return successResponse(res, invoice);
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      const invoice = await this.invoiceService.updateStatus(
-        invoiceNumber,
-        data,
-      );
+  async cancel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const invoiceNumber = req.params.invoiceNumber as string;
+      const data = req.body as CancelInvoiceRequest;
+
+      const invoice = await this.invoiceService.cancel(invoiceNumber, data);
 
       return successResponse(res, invoice);
     } catch (error) {

@@ -41,12 +41,18 @@ export const createInvoiceSchema = z.object({
 
         unitPrice: z
           .string()
-          .regex(/^\d+(\.\d{1,2})?$/, "Unit price must have at most 2 decimal places")
+          .regex(
+            /^\d+(\.\d{1,2})?$/,
+            "Unit price must have at most 2 decimal places",
+          )
           .transform(Number),
 
         taxRate: z
           .string()
-          .regex(/^\d+(\.\d{1,2})?$/, "Tax rate must have at most 2 decimal places")
+          .regex(
+            /^\d+(\.\d{1,2})?$/,
+            "Tax rate must have at most 2 decimal places",
+          )
           .transform(Number)
           .refine((val) => val <= 100, "Tax rate must be between 0 and 100"),
       }),
@@ -55,31 +61,18 @@ export const createInvoiceSchema = z.object({
 });
 export type CreateInvoiceRequest = z.infer<typeof createInvoiceSchema>;
 
-
 // get invoice by invoice number
 export const invoiceNumberParamSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
 });
 
-
 // get list invoice
 export const listInvoiceSchema = z.object({
-  page: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(1),
+  page: z.coerce.number().int().positive().default(1),
 
-  limit: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(100)
-    .default(20),
+  limit: z.coerce.number().int().positive().max(100).default(20),
 
-  status: z
-    .enum(Object.values(INVOICE_STATUS))
-    .optional(),
+  status: z.enum(Object.values(INVOICE_STATUS)).optional(),
 });
 export type ListInvoiceRequest = z.infer<typeof listInvoiceSchema>;
 
@@ -123,12 +116,18 @@ export const updateInvoiceSchema = z.object({
 
         unitPrice: z
           .string()
-          .regex(/^\d+(\.\d{1,2})?$/, "Unit price must have at most 2 decimal places")
+          .regex(
+            /^\d+(\.\d{1,2})?$/,
+            "Unit price must have at most 2 decimal places",
+          )
           .transform(Number),
 
         taxRate: z
           .string()
-          .regex(/^\d+(\.\d{1,2})?$/, "Tax rate must have at most 2 decimal places")
+          .regex(
+            /^\d+(\.\d{1,2})?$/,
+            "Tax rate must have at most 2 decimal places",
+          )
           .transform(Number)
           .refine((val) => val <= 100, "Tax rate must be between 0 and 100"),
       }),
@@ -138,9 +137,10 @@ export const updateInvoiceSchema = z.object({
 });
 export type UpdateInvoiceRequest = z.infer<typeof updateInvoiceSchema>;
 
-// Schema for updating invoice status
-export const updateStatusSchema = z.object({
-  status: z.enum(Object.values(INVOICE_STATUS)),
-  reason: z.string().max(500).optional(),
+// Schema for canceling invoice
+export const cancelInvoiceSchema = z.object({
+  cancelReason: z
+    .string()
+    .max(500, "Cancel reason must not exceed 500 characters"),
 });
-export type UpdateStatusRequest = z.infer<typeof updateStatusSchema>;
+export type CancelInvoiceRequest = z.infer<typeof cancelInvoiceSchema>;
