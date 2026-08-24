@@ -55,13 +55,11 @@ const shouldSkip = !process.env.DATABASE_URL;
       const invoiceNumber = createResponse.body.data.invoiceNumber;
 
       // Issue then cancel
-      await request(app)
-        .patch(`/api/invoices/${invoiceNumber}/status`)
-        .send({ status: "ISSUED" });
+      await request(app).post(`/api/invoices/${invoiceNumber}/issue`);
 
       await request(app)
-        .patch(`/api/invoices/${invoiceNumber}/status`)
-        .send({ status: "CANCELED", reason: "Test cancel" });
+        .post(`/api/invoices/${invoiceNumber}/cancel`)
+        .send({ cancelReason: "Test cancel" });
 
       // Delete invoice
       const deleteResponse = await request(app)
@@ -78,9 +76,7 @@ const shouldSkip = !process.env.DATABASE_URL;
 
       const invoiceNumber = createResponse.body.data.invoiceNumber;
 
-      await request(app)
-        .patch(`/api/invoices/${invoiceNumber}/status`)
-        .send({ status: "ISSUED" });
+      await request(app).post(`/api/invoices/${invoiceNumber}/issue`);
 
       // Try to delete
       const deleteResponse = await request(app)

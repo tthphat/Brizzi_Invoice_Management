@@ -38,7 +38,6 @@ router.patch(
   invoiceController.updateDraft.bind(invoiceController),
 );
 
-
 // issue invoice
 router.post(
   "/:invoiceNumber/issue",
