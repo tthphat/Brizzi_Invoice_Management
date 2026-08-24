@@ -1,0 +1,473 @@
+{
+  "info": {
+    "name": "Invoice Management API",
+    "description": "Collection duy nhat de test toan bo Invoice Management API.\n\nChay thu tu cac request trong thu muc 'Full Lifecycle Flow' tu tren xuong duoi - bien {{invoiceNumber}} va {{replacementInvoiceNumber}} duoc tu dong chain giua cac request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "invoiceNumber", "value": "" },
+    { "key": "replacementInvoiceNumber", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Full Lifecycle Flow",
+      "description": "Luong song tron: Create -> Update -> Issue -> PDF -> Replace -> Cancel -> Delete. Chay lan luot tu tren xuong.",
+      "item": [
+        {
+          "name": "01. Create invoice (DRAFT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Created as DRAFT\", () => pm.expect(body.data.status).to.eql(\"DRAFT\"));",
+                  "pm.test(\"Totals calculated (2*100000=200000, VAT10%=20000)\", () => {",
+                  "  pm.expect(body.data.subtotal).to.eql(200000);",
+                  "  pm.expect(body.data.taxAmount).to.eql(20000);",
+                  "  pm.expect(body.data.total).to.eql(220000);",
+                  "});",
+                  "pm.collectionVariables.set(\"invoiceNumber\", body.data.invoiceNumber);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices", "host": ["{{baseUrl}}"], "path": ["api", "invoices"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Cong ty TNHH ABC\",\n  \"customerEmail\": \"abc@example.com\",\n  \"customerAddress\": \"123 Nguyen Trai, Quan 1, TP.HCM\",\n  \"customerTaxCode\": \"0123456789\",\n  \"currency\": \"VND\",\n  \"items\": [\n    {\n      \"description\": \"Dich vu tu van thue\",\n      \"quantity\": 2,\n      \"unitPrice\": \"100000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "02. Update draft invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Updated + recalculated (3*150000=450000, VAT8%=36000)\", () => {",
+                  "  pm.expect(body.data.customerName).to.eql(\"Cong ty TNHH ABC (Updated)\");",
+                  "  pm.expect(body.data.total).to.eql(486000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Cong ty TNHH ABC (Updated)\",\n  \"items\": [\n    {\n      \"description\": \"Dich vu tu van thue (mo rong)\",\n      \"quantity\": 3,\n      \"unitPrice\": \"150000\",\n      \"taxRate\": \"8\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "03. Issue invoice (DRAFT -> ISSUED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Now ISSUED with issuedAt\", () => {",
+                  "  pm.expect(body.data.status).to.eql(\"ISSUED\");",
+                  "  pm.expect(body.data.issuedAt).to.not.eql(null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/issue", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}", "issue"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "04. Get invoice by number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Has items\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.items.length).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}"] }
+          }
+        },
+        {
+          "name": "05. List invoices (?page=&limit=&status=)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Pagination present\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.pagination).to.have.property(\"total\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices?page=1&limit=10&status=ISSUED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "ISSUED" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "06. Export PDF - ISSUED (use Send and Download!)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/pdf", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}", "pdf"] },
+            "description": "Response la binary PDF. Bam mui ten xuong ben phai nut Send -> chon 'Send and Download' de luu file roi mo bang trinh doc PDF."
+          }
+        },        {
+          "name": "07. Update ISSUED invoice (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 - issued invoice is immutable\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error message\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error.message).to.eql(\"Invoice is not a draft\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Should not be allowed\"\n}" }
+          }
+        },
+        {
+          "name": "08. Delete ISSUED invoice (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 403 - cannot delete issued invoice\", () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}"] }
+          }
+        },
+        {
+          "name": "09. Replace invoice (creates new, cancels original)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"New ISSUED invoice linked to original\", () => {",
+                  "  pm.expect(body.data.status).to.eql(\"ISSUED\");",
+                  "  pm.expect(body.data.replacedInvoiceId).to.not.eql(null);",
+                  "});",
+                  "pm.collectionVariables.set(\"replacementInvoiceNumber\", body.data.invoiceNumber);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/replace", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}", "replace"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Cong ty TNHH ABC (Corrected)\",\n  \"currency\": \"VND\",\n  \"items\": [\n    {\n      \"description\": \"Dich vu tu van thue (da chinh sua)\",\n      \"quantity\": 2,\n      \"unitPrice\": \"150000\",\n      \"taxRate\": \"8\"\n    }\n  ],\n  \"reason\": \"Sai so luong tren hoa don cu\"\n}"
+            }
+          }
+        },
+        {
+          "name": "10. Verify original CANCELED after replace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Original canceled with reason, issuedAt kept\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.status).to.eql(\"CANCELED\");",
+                  "  pm.expect(body.data.cancelReason).to.eql(\"Sai so luong tren hoa don cu\");",
+                  "  pm.expect(body.data.issuedAt).to.not.eql(null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}"] }
+          }
+        },
+        {
+          "name": "11. Replace original again (expect 409 CONFLICT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"CONFLICT code with replacement number\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error.code).to.eql(\"CONFLICT\");",
+                  "  pm.expect(body.error.message).to.include(\"already replaced by\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{invoiceNumber}}/replace", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{invoiceNumber}}", "replace"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Try replace again\",\n  \"items\": [\n    {\n      \"description\": \"Item\",\n      \"quantity\": 1,\n      \"unitPrice\": \"10000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}"
+            }
+          }
+        },        {
+          "name": "12. Cancel replacement invoice (ISSUED -> CANCELED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Canceled with reason, issuedAt preserved\", () => {",
+                  "  pm.expect(body.data.status).to.eql(\"CANCELED\");",
+                  "  pm.expect(body.data.canceledAt).to.not.eql(null);",
+                  "  pm.expect(body.data.cancelReason).to.eql(\"Khach yeu cau huy\");",
+                  "  pm.expect(body.data.issuedAt).to.not.eql(null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{replacementInvoiceNumber}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{replacementInvoiceNumber}}", "cancel"] },
+            "body": { "mode": "raw", "raw": "{\n  \"cancelReason\": \"Khach yeu cau huy\"\n}" }
+          }
+        },
+        {
+          "name": "13. Cancel replacement again (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 - already canceled\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error message\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error.message).to.eql(\"Only ISSUED invoice can be canceled\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{replacementInvoiceNumber}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{replacementInvoiceNumber}}", "cancel"] },
+            "body": { "mode": "raw", "raw": "{\n  \"cancelReason\": \"Try cancel again\"\n}" }
+          }
+        },
+        {
+          "name": "14. Export PDF - CANCELED with stamp (use Send and Download!)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{replacementInvoiceNumber}}/pdf", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{replacementInvoiceNumber}}", "pdf"] },
+            "description": "Dung 'Send and Download'. PDF nay phai co stamp do 'DA HUY' + ly do/ngay huy."
+          }
+        },
+        {
+          "name": "15. Delete CANCELED invoice (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test(\"Status 200\", () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{replacementInvoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{replacementInvoiceNumber}}"] }
+          }
+        },
+        {
+          "name": "16. Get deleted invoice (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"NOT_FOUND code\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error.code).to.eql(\"NOT_FOUND\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/invoices/{{replacementInvoiceNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "{{replacementInvoiceNumber}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Validation & Not Found",
+      "description": "Cac request loi doc lap, chay bat ky luc nao cung duoc.",
+      "item": [
+        {
+          "name": "V1. Create missing items (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"VALIDATION_ERROR code\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices", "host": ["{{baseUrl}}"], "path": ["api", "invoices"] },
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"No items here\"\n}" }
+          }
+        },
+        {
+          "name": "V2. Create invalid email (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices", "host": ["{{baseUrl}}"], "path": ["api", "invoices"] },
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Test\",\n  \"customerEmail\": \"not-an-email\",\n  \"items\": [\n    {\n      \"description\": \"Item\",\n      \"quantity\": 1,\n      \"unitPrice\": \"10000\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "V3. Create unitPrice with 3 decimals (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 - max 2 decimal places\", () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/invoices", "host": ["{{baseUrl}}"], "path": ["api", "invoices"] },
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Test\",\n  \"items\": [\n    {\n      \"description\": \"Item\",\n      \"quantity\": 1,\n      \"unitPrice\": \"100.999\",\n      \"taxRate\": \"10\"\n    }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "V4. Get non-existent invoice (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"NOT_FOUND code\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error.code).to.eql(\"NOT_FOUND\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/invoices/INV-9999-NOTEXIST", "host": ["{{baseUrl}}"], "path": ["api", "invoices", "INV-9999-NOTEXIST"] }
+          }
+        }
+      ]
+    }
+  ]
+}
